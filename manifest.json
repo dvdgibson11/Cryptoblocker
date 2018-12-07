@@ -1,0 +1,12 @@
+{
+	"name": "Minerblocker", 
+	"version": "1.0", 
+	"description": 
+	"Dynamically block cryptocurrency miners", 
+	"manifest_version": 2
+	"background": {
+		"scripts": ["background.js"],
+		"persistent": false
+	},
+	"permissions": ["storage"]
+}
