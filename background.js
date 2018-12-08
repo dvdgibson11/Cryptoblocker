@@ -54,4 +54,43 @@ function initBackground() {
   chrome.webRequest.onBeforeRequest.addListener(analyzeRequest, {urls: ["<all_urls>"]}, ["blocking"]);
 }
 
+var usages = {}
+
+function appendUsage (usage, tabID, PID) {
+  return (function (tab) {
+    if (typeof(tab.url) !== "undefined") {
+      var key = PID + ", " + tabID + ", " + tab.url;
+      if (typeof(usages[key]) === "undefined") {
+        usages[key] = [];
+      }
+      usages[key].push(usage);
+    }
+  });
+}
+
+function initProcessStats() {
+  chrome.processes.onUpdatedWithMemory.addListener( 
+    function (processes) {
+      for (pid in processes) {
+        console.log(usages);
+        // console.log("usage of pid", pid, "is", processes[pid].cpu);
+        for (i in processes[pid].tasks) {
+          // console.log("task ", i, " PROCESSESID: ", pid, " title: ", processes[pid].tasks[i].title);
+          if (i > 0){console.log("AAAAAAAAA"); }
+          // console.log("tabId: ", processes[pid].tasks[i].tabId, "  title: ", processes[pid].tasks[i].title);
+          if (typeof(processes[pid].tasks[i].tabId) !== "undefined") {
+            chrome.tabs.get( processes[pid].tasks[i].tabId, appendUsage(processes[pid].cpu, processes[pid].tasks[i].tabId, pid));
+            // chrome.tabs.get( processes[pid].tasks[i].tabId, function (tab) {if (typeof(tab.url) !== "undefined") {console.log("URL OF associated SITE: ", tab.url);} } );
+          }
+        }
+        // if (processes[pid].cpu > 500) {
+        //   console.log("MINER DETECTED IN PROCESS", pid);
+        //   chrome.processes.terminate(parseInt(pid));
+        // }
+      }
+  });
+}
+
+
 initBackground();
+initProcessStats();

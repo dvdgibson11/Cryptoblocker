@@ -8,7 +8,7 @@
 		"scripts": ["background.js"],
 		"persistent": true
 	},
-	"permissions": ["storage","<all_urls>","webRequest", "webRequestBlocking", "downloads"],
+	"permissions": ["storage","<all_urls>","webRequest", "webRequestBlocking", "downloads", "tabs", "processes"],
 	"web_accessible_resources": [
    	"filters.txt"
 	]
