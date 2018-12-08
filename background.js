@@ -2,30 +2,32 @@ const filterURL = chrome.runtime.getURL('filters.txt');
 var filters = new Set();
 
 function parseFilters(text) {
-  text = text.split("\n");
-  filters = new Set(text);
+  filters = text.split("\n");
+  for (var i in filters) {
+    filters[i] = filters[i].trim();
+  }
+  filters.splice(-1,1)
+  console.log(filters)
 }
 
 function isMiningUrl(url) {
-  reqURL =  new URL(url)
-  if (filters.has(reqURL.hostname)) {
-    console.log("Detected Miner: " + reqURL.hostname);
+  for (var i in filters) {
+    if (url.includes(filters[i])) {
+      console.log("Detected Miner: " + filters[i]);
+      return true;
+    }
   }
+  return false;
 }
-
 
 function analyzeRequest(details){
-  console.log(details);
-  isMiningUrl(details.url);
-
+  return {cancel: isMiningUrl(details.url)};
 }
-
-
 
 function initBackground() {
   fetch(filterURL).then((response) => response.text()).then((text) => parseFilters(text));
 
-  chrome.webRequest.onBeforeRequest.addListener(analyzeRequest, {urls: ["<all_urls>"], types: ['xmlhttprequest', 'websocket']});
-
+  chrome.webRequest.onBeforeRequest.addListener(analyzeRequest, {urls: ["<all_urls>"]}, ["blocking"]);
 }
+
 initBackground();
