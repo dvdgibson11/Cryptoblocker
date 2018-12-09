@@ -55,16 +55,29 @@ function initBackground() {
 }
 
 var usages = {}
+var alerted = {}
+
+function suspiciousUsage(arr) {
+  return ((Math.max(...arr) - Math.min(...arr)) / Math.max(...arr) < 0.2)
+}
 
 function appendUsage (usage, tabID, PID) {
   return (function (tab) {
-    if (typeof(tab.url) !== "undefined") {
-      var key = PID + ", " + tabID + ", " + tab.url;
-      if (typeof(usages[key]) === "undefined") {
-        usages[key] = [];
+    // if (typeof(tab) !== "undefined")  {
+      if (typeof(tab.url) !== "undefined") {
+        var key = PID + ", " + tabID + ", " + tab.url;
+        if (typeof(usages[key]) === "undefined") {
+          usages[key] = [];
+        }
+        usages[key].push(usage);
+        if ((typeof(alerted[key]) === "undefined") && suspiciousUsage(usages[key].slice(-20)) && usages[key].length > 20) {
+          console.log("MINER DETECTED IN PROCESSES", PID, "URL = ", tab.url)
+          alert("Potential miner detected in site " + tab.url)
+          alerted[key] = true;
+          // chrome.processes.terminate(parseInt(PID))
+        }
       }
-      usages[key].push(usage);
-    }
+    // }
   });
 }
 
