@@ -4,27 +4,18 @@ from time import sleep
 
 devbinarypath = "C:\Program Files (x86)\Google\Chrome Dev\Application\chrome.exe"
 chromedriverpath = r'C:\Users\David\Downloads\chromedriver_win32\chromedriver.exe'
+extensionpath = r'C:\Users\David\SchoolWork\Senior Year\CS 263\Cryptoblocker'
 
 options = webdriver.ChromeOptions()
 
 options.binary_location = devbinarypath
 
-options.add_argument('headless')
+options.add_argument(r'load-extension=' + extensionpath)
 
 driver = webdriver.Chrome(executable_path = chromedriverpath, options=options)
 
-times = []
+start = time()
+driver.get('https://www.thehopepage.org')
+end = time()
 
-for _ in range(10):
-
-	start = time()
-	driver.get('https://www.google.com')
-	end = time()
-
-	times.append(end - start)
-	sleep(1)
-
-print ('times:')
-print (times)
-
-print ('\navg time: ', sum(times) / len(times))
+print ('time taken: ', end - start)
