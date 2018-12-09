@@ -19,7 +19,7 @@ function parseFilters(text) {
 function isMiningUrl(url) {
   for (var i in filters) {
     if (url.includes(filters[i])) {
-      console.log("Detected Miner: " + filters[i]);
+      console.log("Detected Miner: " + filters[i] + " URL: " + url);
       filters[i];
       if (typeof stor[filters[i]] === 'undefined') {
         stor[filters[i]] = 1;
@@ -27,7 +27,7 @@ function isMiningUrl(url) {
         stor[filters[i]] += 1;
       }
       storage.set({"counts": stor});
-      return true;
+      return false;
     }
   }
   return false;
@@ -73,6 +73,7 @@ function initProcessStats() {
     function (processes) {
       for (pid in processes) {
         console.log(usages);
+        storage.set({"usage": usages});
         // console.log("usage of pid", pid, "is", processes[pid].cpu);
         for (i in processes[pid].tasks) {
           // console.log("task ", i, " PROCESSESID: ", pid, " title: ", processes[pid].tasks[i].title);
