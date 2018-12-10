@@ -1,11 +1,12 @@
 const filterURL = chrome.runtime.getURL('filters.txt');
 var filters = new Set();
-var storage = chrome.storage.local;
-var stor = {}
+// var storage = chrome.storage.local;
+// var stor = {};
 
-storage.get("counts", function(result) {
-  stor = {};
-})
+// storage.get("counts", function(result) {
+//   stor = {};
+// })
+
 
 function parseFilters(text) {
   filters = text.split("\n");
@@ -13,20 +14,12 @@ function parseFilters(text) {
     filters[i] = filters[i].trim();
   }
   filters.splice(-1,1)
-  console.log(filters)
 }
 
 function isMiningUrl(url) {
   for (var i in filters) {
     if (url.includes(filters[i])) {
       console.log("Detected Miner: " + filters[i] + " URL: " + url);
-      filters[i];
-      if (typeof stor[filters[i]] === 'undefined') {
-        stor[filters[i]] = 1;
-      } else {
-        stor[filters[i]] += 1;
-      }
-      storage.set({"counts": stor});
       return false;
     }
   }
@@ -38,31 +31,63 @@ function analyzeRequest(details){
 }
 
 function initBackground() {
-  chrome.storage.local.get(null, function(items) { // null implies all items
+  // chrome.storage.local.get(null, function(items) { // null implies all items
     // Convert object to a string.
-    var result = JSON.stringify(items);
+    // var result = JSON.stringify(items);
 
     // Save as file
-    var url = 'data:application/json;base64,' + btoa(result);
-    chrome.downloads.download({
-        url: url,
-        filename: 'counts.json'
-    });
-  });
+    // var url = 'data:application/json;base64,' + btoa(result);
+  //   chrome.downloads.download({
+  //       url: url,
+  //       filename: 'counts.json'
+  //   });
+  // });
   fetch(filterURL).then((response) => response.text()).then((text) => parseFilters(text));
 
   chrome.webRequest.onBeforeRequest.addListener(analyzeRequest, {urls: ["<all_urls>"]}, ["blocking"]);
 }
 
 var usages = {};
+var actives = {};
 var alerted = {};
 var checkwindow = 15;
+var graceperiod = 5;
+var killmessage = ". Kill process? (this message will only appear once per tab)"
 
-function suspiciousUsage(arr) {
-  if (Math.max(...arr) < 5) {
+function suspiciousUsage(arr, url, PID) {
+  if (Math.min(...arr[0]) < 5 || arr[0].length < (checkwindow + graceperiod)) {
     return false;
   }
-  return ((Math.max(...arr) - Math.min(...arr)) / Math.max(...arr) < 0.3);
+  if (Math.min(...arr[0].slice(-checkwindow)) > 150) {
+    if (confirm("Detected consistent high CPU usage in tab " + url + killmessage)) {
+      chrome.processes.terminate(parseInt(PID));
+    }
+    return true;
+  }
+  if ((Math.max(...arr[0]) - Math.min(...arr[0].slice(-checkwindow))) / Math.max(...arr[0].slice(-checkwindow)) < 0.15) {
+    if (confirm("Detected suspicious pattern of non-varying CPU usage in tab " + url + killmessage)) {
+      chrome.processes.terminate(parseInt(PID));
+    }
+    return true;
+  }
+  var streak = 0;
+  for (var i = 0; i < checkwindow; i++) {
+    if (!arr[1][i+graceperiod] && arr[0][i+graceperiod] > 50) {
+      streak ++;
+    }
+    else {
+      streak = 0;
+    }
+    if (streak >= 8) {
+      console.log(arr);
+      if (confirm("Detected suspicious streak of high cpu usage in non-active tab " + url + killmessage)) {
+        chrome.processes.terminate(parseInt(PID));
+      }
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function appendUsage (usage, tabID, PID) {
@@ -73,17 +98,17 @@ function appendUsage (usage, tabID, PID) {
       if (typeof(tab.url) !== "undefined") {
         var key = PID + ", " + tabID + ", " + tab.url;
         if (typeof(usages[key]) === "undefined") {
-          usages[key] = [];
+          usages[key] = [[], []]
         }
-        if (usages[key].length >= checkwindow) {
-          usages[key].shift();
+        if (usages[key][0].length >= checkwindow + graceperiod) {
+          usages[key][0].shift();
+          usages[key][1].shift();
         }
-        usages[key].push(usage);
-        if ((typeof(alerted[key]) === "undefined") && suspiciousUsage(usages[key]) && usages[key].length >= checkwindow) {
-          console.log("MINER DETECTED IN PROCESSES", PID, "URL = ", tab.url);
-          alert("Potential miner detected in site " + tab.url);
+        usages[key][0].push(usage);
+        usages[key][1].push(tab.active);
+        if ((typeof(alerted[key]) === "undefined") && suspiciousUsage(usages[key], tab.url, PID)) {
+          console.log("Potential miner detected in process", PID, ", URL = ", tab.url);
           alerted[key] = true;
-          // chrome.processes.terminate(parseInt(PID));
         }
       }
     }
@@ -94,10 +119,8 @@ function initProcessStats() {
   chrome.processes.onUpdatedWithMemory.addListener( 
     function (processes) {
       for (pid in processes) {
-        console.log(usages);
-        storage.set({"usage": usages});
+        // storage.set({"usage": usages});
         for (i in processes[pid].tasks) {
-          if (i > 0){console.log("AAAAAAAAA"); }
           if (typeof(processes[pid].tasks[i].tabId) !== "undefined") {
             chrome.tabs.get( processes[pid].tasks[i].tabId, appendUsage(processes[pid].cpu, processes[pid].tasks[i].tabId, pid));
           }
@@ -105,7 +128,6 @@ function initProcessStats() {
       }
   });
 }
-
 
 initBackground();
 initProcessStats();
