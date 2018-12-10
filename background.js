@@ -58,18 +58,21 @@ function suspiciousUsage(arr, url, PID) {
   if (Math.min(...arr[0]) < 5 || arr[0].length < (checkwindow + graceperiod)) {
     return false;
   }
+  // general high usage check
   if (Math.min(...arr[0].slice(-checkwindow)) > 150) {
     if (confirm("Detected consistent high CPU usage in tab " + url + killmessage)) {
       chrome.processes.terminate(parseInt(PID));
     }
     return true;
   }
+  // consistent usage check
   if ((Math.max(...arr[0]) - Math.min(...arr[0].slice(-checkwindow))) / Math.max(...arr[0].slice(-checkwindow)) < 0.15) {
     if (confirm("Detected suspicious pattern of non-varying CPU usage in tab " + url + killmessage)) {
       chrome.processes.terminate(parseInt(PID));
     }
     return true;
   }
+  // high background usage check
   var streak = 0;
   for (var i = 0; i < checkwindow; i++) {
     if (!arr[1][i+graceperiod] && arr[0][i+graceperiod] > 50) {
