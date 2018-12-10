@@ -20,7 +20,7 @@ function isMiningUrl(url) {
   for (var i in filters) {
     if (url.includes(filters[i])) {
       console.log("Detected Miner: " + filters[i] + " URL: " + url);
-      return false;
+      return true;
     }
   }
   return false;
@@ -79,7 +79,6 @@ function suspiciousUsage(arr, url, PID) {
       streak = 0;
     }
     if (streak >= 8) {
-      console.log(arr);
       if (confirm("Detected suspicious streak of high cpu usage in non-active tab " + url + killmessage)) {
         chrome.processes.terminate(parseInt(PID));
       }
